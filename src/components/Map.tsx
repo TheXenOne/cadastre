@@ -4,6 +4,24 @@ import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
+// Hard-coded sample properties for now.
+const properties = [
+    {
+        id: 1,
+        name: "Test Office A",
+        address: "Somewhere in the City",
+        lng: -0.09,
+        lat: 51.515,
+    },
+    {
+        id: 2,
+        name: "Test Office B",
+        address: "Somewhere in Westminster",
+        lng: -0.13,
+        lat: 51.505,
+    },
+];
+
 export default function Map() {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -41,6 +59,33 @@ export default function Map() {
         });
 
         map.addControl(new maplibregl.NavigationControl(), "top-right");
+
+        // Add a marker for each hard-coded property.
+        properties.forEach((property) => {
+            // Create a popup with some simple HTML.
+            const popup = new maplibregl.Popup({ offset: 25 }).setHTML(
+                `
+                <div style="
+                    font-size: 13px;
+                    color: #000;
+                ">
+                <div style="font-weight: 600; margin-bottom: 4px;">
+                    ${property.name}
+                </div>
+                <div>
+                    ${property.address}
+                </div>
+              </div>
+            `
+            );
+
+            // Create the marker and attach the popup.
+            new maplibregl.Marker()
+                .setLngLat([property.lng, property.lat])
+                .setPopup(popup)
+                .addTo(map);
+        });
+
         mapRef.current = map;
 
         return () => {
