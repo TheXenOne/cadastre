@@ -1,48 +1,37 @@
-// This file defines the *main page* of your app.
-// In the Next.js App Router, `app/page.tsx` is what shows up at "/" (the home URL).
+"use client";
+// ^ This tells Next.js that this page runs in the browser,
+//   so it can use client-side stuff and client components.
 
-// We export a React component called `Home`.
-// Next.js will render this component when someone visits http://localhost:3000
+import Map from "@/components/Map"; // Import the Map component we just created.
+
 export default function Home() {
   return (
-    // <main> is a semantic HTML tag that describes the main content of the page.
-    // Here we give it inline styles (a bit like setting properties in a Unity/UE inspector).
+    // Main layout container for the page.
     <main
       style={{
-        // Take at least the full height of the browser window.
-        minHeight: "100vh",
-        // Use flexbox layout so we can easily arrange header + content.
+        minHeight: "100vh", // Take up the full browser height.
         display: "flex",
-        // Stack children (header + section) vertically.
-        flexDirection: "column",
+        flexDirection: "column", // Stack header and content vertically.
       }}
     >
-      {/* HEADER AREA */}
+      {/* Simple header bar at the top */}
       <header
         style={{
-          // Add some space inside the header.
           padding: "1rem",
-          // A light line at the bottom to separate it from the content.
           borderBottom: "1px solid #ddd",
         }}
       >
-        {/* This is just a title at the top of the page. */}
         <h1>Cadastre – Local Map Prototype</h1>
       </header>
 
-      {/* MAIN CONTENT AREA – this is where the map will go later */}
+      {/* This section fills the rest of the page and holds the map */}
       <section
         style={{
-          // Make this section take up all remaining vertical space.
-          flex: 1,
-          // Center its children vertically and horizontally.
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          flex: 1,              // take all remaining space under the header
+          position: "relative", // so children can absolutely fill this area
         }}
       >
-        {/* Temporary placeholder text so we know where the map will be rendered. */}
-        <p>Map will go here.</p>
+        <Map />
       </section>
     </main>
   );
