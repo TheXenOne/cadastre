@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 export default function Map() {
     const containerRef = useRef<HTMLDivElement | null>(null);
