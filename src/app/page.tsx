@@ -9,9 +9,10 @@ export default function Home() {
     // Main layout container for the page.
     <main
       style={{
-        minHeight: "100vh", // Take up the full browser height.
+        height: "100vh",      // exactly one viewport height
+        overflow: "hidden",   // don't let the page scroll
         display: "flex",
-        flexDirection: "column", // Stack header and content vertically.
+        flexDirection: "column",
       }}
     >
       {/* Simple header bar at the top */}
