@@ -1,14 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import Map from "@/components/Map";
 import { properties } from "@/data/properties";
 
 export default function Home() {
+  // Keep track of which property (by id) is selected from the list.
+  const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(
+    null
+  );
+
   return (
     <main
       style={{
-        height: "100vh",     // exactly one screen
-        overflow: "hidden",  // no page scrolling
+        height: "100vh",
+        overflow: "hidden",
         display: "flex",
         flexDirection: "column",
       }}
@@ -30,11 +36,11 @@ export default function Home() {
       <section
         style={{
           flex: 1,
-          display: "flex",   // lay out sidebar and map next to each other
-          minHeight: 0,      // helps prevent flex children from overflowing
+          display: "flex",
+          minHeight: 0,
         }}
       >
-        {/* LEFT: simple property list */}
+        {/* LEFT: property list */}
         <aside
           style={{
             width: 260,
@@ -42,7 +48,7 @@ export default function Home() {
             backgroundColor: "#181818",
             color: "#f5f5f5",
             fontSize: "13px",
-            overflowY: "auto", // scroll list if it’s tall
+            overflowY: "auto",
           }}
         >
           <div
@@ -56,20 +62,26 @@ export default function Home() {
           </div>
 
           <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-            {properties.map((p) => (
-              <li
-                key={p.id}
-                style={{
-                  padding: "0.5rem 0.75rem",
-                  borderBottom: "1px solid #222",
-                }}
-              >
-                <div style={{ fontWeight: 600, marginBottom: 2 }}>
-                  {p.name}
-                </div>
-                <div style={{ opacity: 0.8 }}>{p.address}</div>
-              </li>
-            ))}
+            {properties.map((p) => {
+              const isSelected = p.id === selectedPropertyId;
+              return (
+                <li
+                  key={p.id}
+                  onClick={() => setSelectedPropertyId(p.id)}
+                  style={{
+                    padding: "0.5rem 0.75rem",
+                    borderBottom: "1px solid #222",
+                    cursor: "pointer",
+                    backgroundColor: isSelected ? "#252525" : "transparent",
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: 2 }}>
+                    {p.name}
+                  </div>
+                  <div style={{ opacity: 0.8 }}>{p.address}</div>
+                </li>
+              );
+            })}
           </ul>
         </aside>
 
@@ -77,10 +89,11 @@ export default function Home() {
         <div
           style={{
             flex: 1,
-            position: "relative", // so Map can absolutely fill this
+            position: "relative",
           }}
         >
-          <Map />
+          {/* Pass the selectedPropertyId down into the map */}
+          <Map selectedPropertyId={selectedPropertyId ?? undefined} />
         </div>
       </section>
     </main>
