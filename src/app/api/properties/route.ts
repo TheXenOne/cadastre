@@ -1,8 +1,10 @@
+import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-// Import the JSON file we just created
-import properties from "@/../public/data/properties.json";
 
 export async function GET() {
-    // Just return the JSON as-is for now
+    const properties = await prisma.property.findMany({
+        orderBy: { id: "asc" },
+    });
+
     return NextResponse.json(properties);
 }
