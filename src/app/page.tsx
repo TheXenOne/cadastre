@@ -155,6 +155,7 @@ export default function Home() {
           <Map
             properties={properties}
             selectedPropertyId={selectedPropertyId ?? undefined}
+            onSelectProperty={setSelectedPropertyId}
           />
         </div>
       </section>
