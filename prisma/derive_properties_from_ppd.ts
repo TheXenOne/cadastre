@@ -8,6 +8,10 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+function normPostcode(pc?: string | null) {
+    return (pc ?? "").replace(/\s+/g, "").toUpperCase();
+}
+
 function makeAddressKey(r: any) {
     return [
         r.paon ?? "",
@@ -59,26 +63,37 @@ async function main() {
     // Upsert into canonical Property
     for (const r of latestPerAddress) {
         const key = makeAddressKey(r);
+        const pc = normPostcode(r.postcode);
+
+        const centroid = pc
+            ? await prisma.rawPostcodeCentroid.findUnique({
+                where: { postcode: pc },
+            })
+            : null;
 
         await prisma.property.upsert({
             where: { addressKey: key },
             update: {
                 name: makeName(r),
                 fullAddress: makeFullAddress(r),
+                postcode: pc || null,
                 district: r.district ?? null,
                 propertyType: r.propertyType ?? "U",
                 lastSalePrice: r.price,
                 lastSaleDate: r.dateOfTransfer,
+                lat: centroid?.lat ?? 51.5,   // fallback if missing
+                lng: centroid?.lng ?? -0.1,
             },
             create: {
                 addressKey: key,
                 name: makeName(r),
                 fullAddress: makeFullAddress(r),
+                postcode: pc || null,
                 district: r.district ?? null,
                 propertyType: r.propertyType ?? "U",
                 ownerName: "Unknown",
-                lat: 51.5,
-                lng: -0.1,
+                lat: centroid?.lat ?? 51.5,
+                lng: centroid?.lng ?? -0.1,
                 lastSalePrice: r.price,
                 lastSaleDate: r.dateOfTransfer,
                 rateableValue: null,

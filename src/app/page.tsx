@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Map from "@/components/Map";
 import type { Property } from "@/data/properties";
+import { propertyTypeLabel } from "@/lib/propertyType";
 
 export default function Home() {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -12,6 +13,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [district, setDistrict] = useState("HARINGEY");
+  const [take, setTake] = useState(500);
+
   // Fetch properties from the API when the page first loads
   useEffect(() => {
     const fetchProperties = async () => {
@@ -19,7 +23,7 @@ export default function Home() {
         setLoading(true);
         setError(null);
 
-        const res = await fetch("/api/properties?district=HARINGEY&take=500");
+        const res = await fetch(`/api/properties?district=${district}&take=${take}`);
         if (!res.ok) {
           throw new Error(`Request failed with status ${res.status}`);
         }
@@ -93,6 +97,52 @@ export default function Home() {
                 : ` (${properties.length})`}
           </div>
 
+          <div style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid #333" }}>
+            <div style={{ marginBottom: 6, fontWeight: 600 }}>Filter</div>
+
+            <label style={{ display: "block", fontSize: 12, opacity: 0.8 }}>
+              District
+            </label>
+            <input
+              value={district}
+              onChange={(e) => setDistrict(e.target.value.toUpperCase())}
+              placeholder="e.g. HARINGEY"
+              style={{
+                width: "100%",
+                marginTop: 4,
+                marginBottom: 8,
+                padding: "6px 8px",
+                borderRadius: 6,
+                border: "1px solid #444",
+                background: "#111",
+                color: "#fff",
+                fontSize: 13,
+              }}
+            />
+
+            <label style={{ display: "block", fontSize: 12, opacity: 0.8 }}>
+              Max results
+            </label>
+            <input
+              type="number"
+              value={take}
+              onChange={(e) => setTake(Number(e.target.value) || 100)}
+              min={50}
+              max={5000}
+              step={50}
+              style={{
+                width: "100%",
+                marginTop: 4,
+                padding: "6px 8px",
+                borderRadius: 6,
+                border: "1px solid #444",
+                background: "#111",
+                color: "#fff",
+                fontSize: 13,
+              }}
+            />
+          </div>
+
           {error && (
             <div style={{ padding: "0.75rem", color: "#ff8a8a" }}>{error}</div>
           )}
@@ -136,7 +186,7 @@ export default function Home() {
                         fontSize: "11px",
                       }}
                     >
-                      {p.propertyType.toUpperCase()} • {p.ownerName}
+                      {propertyTypeLabel(p.propertyType)} • {p.ownerName}
                     </div>
                   </li>
                 );

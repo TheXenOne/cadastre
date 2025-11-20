@@ -11,6 +11,7 @@ model Property {
   addressKey     String?   @unique
   name           String
   fullAddress    String
+  postcode       String?
   district       String?
   propertyType   String
   ownerName      String
@@ -43,6 +44,14 @@ model RawPpdTransaction {
   county         String?
   ppdCategory    String? // A/B
   recordStatus   String? // A/C/D (may be null in yearly)
+
+  ingestedAt DateTime @default(now())
+}
+
+model RawPostcodeCentroid {
+  postcode String @id
+  lat      Float
+  lng      Float
 
   ingestedAt DateTime @default(now())
 }

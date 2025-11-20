@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Property } from "@/data/properties";
+import { propertyTypeLabel } from "@/lib/propertyType";
 
 type MapProps = {
     properties: Property[];
@@ -148,7 +149,7 @@ export default function Map({
 
         <div class="cad-popup-row">
           <span class="cad-popup-row-label">Type:</span>
-          <span>${property.propertyType.toUpperCase()}</span>
+          <span>${propertyTypeLabel(property.propertyType)}</span>
         </div>
 
         <div class="cad-popup-row">
