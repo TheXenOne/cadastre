@@ -53,3 +53,51 @@ body {
 .maplibregl-popup-close-button:hover {
   color: #000;
 }
+
+/* Map popup container – clean white card with dark text */
+.maplibregl-popup-content {
+  background: #ffffff;
+  color: #111111;
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  font-size: 13px;
+}
+
+/* Make sure everything inside inherits the dark text colour */
+.maplibregl-popup-content * {
+  color: inherit;
+}
+
+/* Pointer under the popup */
+.maplibregl-popup-tip {
+  border-top-color: #ffffff !important;
+}
+
+/* Our inner layout classes */
+.cad-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cad-popup-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.cad-popup-subtitle {
+  opacity: 0.85;
+  font-size: 12px;
+}
+
+.cad-popup-row {
+  font-size: 12px;
+}
+
+.cad-popup-row-label {
+  font-weight: 600;
+  margin-right: 4px;
+}

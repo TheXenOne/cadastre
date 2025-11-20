@@ -78,7 +78,12 @@ export default function Home() {
                   <div style={{ fontWeight: 600, marginBottom: 2 }}>
                     {p.name}
                   </div>
-                  <div style={{ opacity: 0.8 }}>{p.address}</div>
+                  <div style={{ opacity: 0.8, marginBottom: 2 }}>
+                    {p.fullAddress}
+                  </div>
+                  <div style={{ opacity: 0.7, fontSize: "12px" }}>
+                    {p.propertyType.toUpperCase()} • {p.ownerName}
+                  </div>
                 </li>
               );
             })}

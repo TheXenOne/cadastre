@@ -50,20 +50,33 @@ export default function Map({ selectedPropertyId }: MapProps) {
 
         // Create a marker + popup for each property and remember the marker
         properties.forEach((property) => {
-            const popup = new maplibregl.Popup({ offset: 25 }).setHTML(
+            const popup = new maplibregl.Popup({
+                offset: 25,
+            }).setHTML(
                 `
-        <div style="
-          font-size: 13px;
-          color: #000;
-        ">
-          <div style="font-weight: 600; margin-bottom: 4px;">
-            ${property.name}
-          </div>
-          <div>
-            ${property.address}
-          </div>
-        </div>
-        `
+  <div class="cad-popup">
+    <div class="cad-popup-title">${property.name}</div>
+    <div class="cad-popup-subtitle">${property.fullAddress}</div>
+
+    <div class="cad-popup-row">
+      <span class="cad-popup-row-label">Type:</span>
+      <span>${property.propertyType.toUpperCase()}</span>
+    </div>
+
+    <div class="cad-popup-row">
+      <span class="cad-popup-row-label">Owner:</span>
+      <span>${property.ownerName}</span>
+    </div>
+
+    ${property.contactSummary
+                    ? `<div class="cad-popup-row">
+             <span class="cad-popup-row-label">Contact:</span>
+             <span>${property.contactSummary}</span>
+           </div>`
+                    : ""
+                }
+  </div>
+  `
             );
 
             const marker = new maplibregl.Marker()
