@@ -1,0 +1,30 @@
+[
+    {
+        "id": 1,
+        "name": "Test Office A",
+        "fullAddress": "Somewhere in the City, London",
+        "lat": 51.515,
+        "lng": -0.09,
+        "propertyType": "office",
+        "ownerName": "Acme PropCo Ltd",
+        "contactSummary": "Acme PropCo – info@acme-propco.example",
+        "lastSalePrice": 2500000,
+        "lastSaleDate": "2019-06-15",
+        "rateableValue": 185000,
+        "epcRating": "B"
+    },
+    {
+        "id": 2,
+        "name": "Test Office B",
+        "fullAddress": "Somewhere in Westminster, London",
+        "lat": 51.505,
+        "lng": -0.13,
+        "propertyType": "office",
+        "ownerName": "Beta Holdings PLC",
+        "contactSummary": "Beta Holdings – property@beta-holdings.example",
+        "lastSalePrice": 3200000,
+        "lastSaleDate": "2021-03-10",
+        "rateableValue": 210000,
+        "epcRating": "C"
+    }
+]

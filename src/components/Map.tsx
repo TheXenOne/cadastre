@@ -3,21 +3,20 @@
 import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { properties } from "@/data/properties";
+import type { Property } from "@/data/properties";
 
-// Props: optional selected property ID
+// Props: the properties to render + which one is selected
 type MapProps = {
+    properties: Property[];
     selectedPropertyId?: number;
 };
 
-export default function Map({ selectedPropertyId }: MapProps) {
+export default function Map({ properties, selectedPropertyId }: MapProps) {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
-
-    // Keep a lookup from property id -> marker
     const markersRef = useRef<Record<number, maplibregl.Marker>>({});
 
-    // 1) Create the map and markers once
+    // 1) Create the map once
     useEffect(() => {
         if (!containerRef.current || mapRef.current) return;
 
@@ -48,46 +47,6 @@ export default function Map({ selectedPropertyId }: MapProps) {
 
         map.addControl(new maplibregl.NavigationControl(), "top-right");
 
-        // Create a marker + popup for each property and remember the marker
-        properties.forEach((property) => {
-            const popup = new maplibregl.Popup({
-                offset: 25,
-            }).setHTML(
-                `
-  <div class="cad-popup">
-    <div class="cad-popup-title">${property.name}</div>
-    <div class="cad-popup-subtitle">${property.fullAddress}</div>
-
-    <div class="cad-popup-row">
-      <span class="cad-popup-row-label">Type:</span>
-      <span>${property.propertyType.toUpperCase()}</span>
-    </div>
-
-    <div class="cad-popup-row">
-      <span class="cad-popup-row-label">Owner:</span>
-      <span>${property.ownerName}</span>
-    </div>
-
-    ${property.contactSummary
-                    ? `<div class="cad-popup-row">
-             <span class="cad-popup-row-label">Contact:</span>
-             <span>${property.contactSummary}</span>
-           </div>`
-                    : ""
-                }
-  </div>
-  `
-            );
-
-            const marker = new maplibregl.Marker()
-                .setLngLat([property.lng, property.lat])
-                .setPopup(popup)
-                .addTo(map);
-
-            // Store marker keyed by property id
-            markersRef.current[property.id] = marker;
-        });
-
         mapRef.current = map;
 
         return () => {
@@ -95,7 +54,90 @@ export default function Map({ selectedPropertyId }: MapProps) {
         };
     }, []);
 
-    // 2) Whenever selectedPropertyId changes, fly to it and open its popup
+    // 2) Whenever the properties array changes, rebuild markers
+    useEffect(() => {
+        if (!mapRef.current) return;
+
+        const map = mapRef.current;
+
+        // Remove any existing markers
+        Object.values(markersRef.current).forEach((marker) => marker.remove());
+        markersRef.current = {};
+
+        // Add markers for each property
+        properties.forEach((property) => {
+            const priceText =
+                property.lastSalePrice != null
+                    ? `£${property.lastSalePrice.toLocaleString("en-GB")}`
+                    : "Unknown";
+
+            const lastSaleDateText =
+                property.lastSaleDate != null
+                    ? new Date(property.lastSaleDate).toLocaleDateString("en-GB")
+                    : "Unknown";
+
+
+            const rateableValueText =
+                property.rateableValue != null
+                    ? `£${property.rateableValue.toLocaleString("en-GB")}`
+                    : "Unknown";
+
+            const epcText = property.epcRating ?? "Unknown";
+
+            const popup = new maplibregl.Popup({
+                offset: 25,
+            }).setHTML(
+                `
+    <div class="cad-popup">
+      <div class="cad-popup-title">${property.name}</div>
+      <div class="cad-popup-subtitle">${property.fullAddress}</div>
+
+      <div class="cad-popup-row">
+        <span class="cad-popup-row-label">Type:</span>
+        <span>${property.propertyType.toUpperCase()}</span>
+      </div>
+
+      <div class="cad-popup-row">
+        <span class="cad-popup-row-label">Owner:</span>
+        <span>${property.ownerName}</span>
+      </div>
+
+      <div class="cad-popup-row">
+        <span class="cad-popup-row-label">Last sale:</span>
+        <span>${priceText} (${lastSaleDateText})</span>
+      </div>
+
+      <div class="cad-popup-row">
+        <span class="cad-popup-row-label">Rateable value:</span>
+        <span>${rateableValueText}</span>
+      </div>
+
+      <div class="cad-popup-row">
+        <span class="cad-popup-row-label">EPC:</span>
+        <span>${epcText}</span>
+      </div>
+
+      ${property.contactSummary
+                    ? `<div class="cad-popup-row">
+               <span class="cad-popup-row-label">Contact:</span>
+               <span>${property.contactSummary}</span>
+             </div>`
+                    : ""
+                }
+    </div>
+    `
+            );
+
+            const marker = new maplibregl.Marker()
+                .setLngLat([property.lng, property.lat])
+                .setPopup(popup)
+                .addTo(map);
+
+            markersRef.current[property.id] = marker;
+        });
+    }, [properties]);
+
+    // 3) When selectedPropertyId changes, fly to it and open its popup
     useEffect(() => {
         if (!mapRef.current || selectedPropertyId == null) return;
 
@@ -105,16 +147,14 @@ export default function Map({ selectedPropertyId }: MapProps) {
         const marker = markersRef.current[selectedPropertyId];
         if (!marker) return;
 
-        // Fly to the property location
         mapRef.current.flyTo({
             center: [property.lng, property.lat],
             zoom: 14,
             essential: true,
         });
 
-        // Open this marker's popup (or close+open if it was already visible)
         marker.togglePopup();
-    }, [selectedPropertyId]);
+    }, [selectedPropertyId, properties]);
 
     return (
         <div

@@ -1,14 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Map from "@/components/Map";
-import { properties } from "@/data/properties";
+import type { Property } from "@/data/properties";
 
 export default function Home() {
-  // Keep track of which property (by id) is selected from the list.
+  const [properties, setProperties] = useState<Property[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(
     null
   );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch properties from the API when the page first loads
+  useEffect(() => {
+    const fetchProperties = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await fetch("/api/properties");
+        if (!res.ok) {
+          throw new Error(`Request failed with status ${res.status}`);
+        }
+
+        const data = (await res.json()) as Property[];
+        setProperties(data);
+      } catch (err: any) {
+        console.error(err);
+        setError("Failed to load properties.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProperties();
+  }, []);
 
   return (
     <main
@@ -58,36 +85,64 @@ export default function Home() {
               fontWeight: 600,
             }}
           >
-            Properties ({properties.length})
+            Properties
+            {loading
+              ? " (loading…)"
+              : error
+                ? ""
+                : ` (${properties.length})`}
           </div>
 
-          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-            {properties.map((p) => {
-              const isSelected = p.id === selectedPropertyId;
-              return (
-                <li
-                  key={p.id}
-                  onClick={() => setSelectedPropertyId(p.id)}
-                  style={{
-                    padding: "0.5rem 0.75rem",
-                    borderBottom: "1px solid #222",
-                    cursor: "pointer",
-                    backgroundColor: isSelected ? "#252525" : "transparent",
-                  }}
-                >
-                  <div style={{ fontWeight: 600, marginBottom: 2 }}>
-                    {p.name}
-                  </div>
-                  <div style={{ opacity: 0.8, marginBottom: 2 }}>
-                    {p.fullAddress}
-                  </div>
-                  <div style={{ opacity: 0.7, fontSize: "12px" }}>
-                    {p.propertyType.toUpperCase()} • {p.ownerName}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          {error && (
+            <div style={{ padding: "0.75rem", color: "#ff8a8a" }}>{error}</div>
+          )}
+
+          {!loading && !error && properties.length === 0 && (
+            <div style={{ padding: "0.75rem", opacity: 0.8 }}>
+              No properties found.
+            </div>
+          )}
+
+          {!loading && !error && properties.length > 0 && (
+            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+              {properties.map((p) => {
+                const isSelected = p.id === selectedPropertyId;
+                return (
+                  <li
+                    key={p.id}
+                    onClick={() => setSelectedPropertyId(p.id)}
+                    style={{
+                      padding: "0.5rem 0.75rem",
+                      borderBottom: "1px solid #222",
+                      cursor: "pointer",
+                      backgroundColor: isSelected ? "#252525" : "transparent",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, marginBottom: 2 }}>
+                      {p.name}
+                    </div>
+                    <div
+                      style={{
+                        opacity: 0.8,
+                        marginBottom: 2,
+                        fontSize: "12px",
+                      }}
+                    >
+                      {p.fullAddress}
+                    </div>
+                    <div
+                      style={{
+                        opacity: 0.7,
+                        fontSize: "11px",
+                      }}
+                    >
+                      {p.propertyType.toUpperCase()} • {p.ownerName}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </aside>
 
         {/* RIGHT: map area */}
@@ -97,8 +152,10 @@ export default function Home() {
             position: "relative",
           }}
         >
-          {/* Pass the selectedPropertyId down into the map */}
-          <Map selectedPropertyId={selectedPropertyId ?? undefined} />
+          <Map
+            properties={properties}
+            selectedPropertyId={selectedPropertyId ?? undefined}
+          />
         </div>
       </section>
     </main>
