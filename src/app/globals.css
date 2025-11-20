@@ -24,3 +24,32 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Make MapLibre popup close button a small, clean "x" */
+.maplibregl-popup-close-button {
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: #444;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 18px;
+  padding: 0;
+  margin: 4px 4px 0 0;
+  cursor: pointer;
+
+  /* Remove the thick focus outline / box */
+  outline: none;
+  box-shadow: none;
+}
+
+/* Also ensure no outline on focus */
+.maplibregl-popup-close-button:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.maplibregl-popup-close-button:hover {
+  color: #000;
+}
