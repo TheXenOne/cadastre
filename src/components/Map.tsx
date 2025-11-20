@@ -55,7 +55,7 @@ export default function Map({
         mapRef.current = map;
 
         return () => {
-            // clean up popup + markers
+            // Clean up popup + markers + map (helps in React StrictMode)
             if (popupRef.current) {
                 popupRef.current.remove();
                 popupRef.current = null;
@@ -63,6 +63,7 @@ export default function Map({
             Object.values(markersRef.current).forEach((m) => m.remove());
             markersRef.current = {};
             map.remove();
+            mapRef.current = null;
         };
     }, []);
 
@@ -78,21 +79,40 @@ export default function Map({
         });
         markersRef.current = {};
 
-        // Add a marker for each property
         properties.forEach((property) => {
-            const marker = new maplibregl.Marker()
-                .setLngLat([property.lng, property.lat])
-                .addTo(map);
+            // Create a custom clickable DOM element for the marker
+            const el = document.createElement("button");
+            el.type = "button";
+            el.className = "cad-marker";
+            el.style.width = "18px";
+            el.style.height = "18px";
+            el.style.borderRadius = "50%";
+            el.style.border = "2px solid #ffffff";
+            el.style.background = "#e74c3c";
+            el.style.cursor = "pointer";
+            el.style.padding = "0";
+            el.style.margin = "0";
+            el.style.pointerEvents = "auto"; // ensure clicks are captured
 
-            marker.getElement().addEventListener("click", () => {
+            // Optional: visual hint when this marker is the selected one
+            if (property.id === selectedPropertyId) {
+                el.style.transform = "scale(1.15)";
+            }
+
+            el.addEventListener("click", (e) => {
+                e.stopPropagation();
                 if (onSelectProperty) {
                     onSelectProperty(property.id);
                 }
             });
 
+            const marker = new maplibregl.Marker({ element: el })
+                .setLngLat([property.lng, property.lat])
+                .addTo(map);
+
             markersRef.current[property.id] = marker;
         });
-    }, [properties, onSelectProperty]);
+    }, [properties, selectedPropertyId, onSelectProperty]);
 
     // 3) When selectedPropertyId changes, fly + open/update popup
     useEffect(() => {
@@ -112,7 +132,6 @@ export default function Map({
         const property = properties.find((p) => p.id === selectedPropertyId);
         if (!property) return;
 
-        // Build the strings for this property
         const priceText =
             property.lastSalePrice != null
                 ? `£${property.lastSalePrice.toLocaleString("en-GB")}`
@@ -172,14 +191,9 @@ export default function Map({
 
         // Create the popup once, then just update it
         if (!popupRef.current) {
-            const popup = new maplibregl.Popup({
-                offset: 25,
-                // optional: keep popup open when clicking map
-                // closeOnClick: false,
-            });
+            const popup = new maplibregl.Popup({ offset: 25 });
 
             popup.on("close", () => {
-                // User clicked the X or map closed it:
                 if (onSelectProperty) onSelectProperty(null);
             });
 
@@ -187,9 +201,7 @@ export default function Map({
             popupRef.current = popup;
         }
 
-        popupRef.current
-            .setLngLat([property.lng, property.lat])
-            .setHTML(html);
+        popupRef.current.setLngLat([property.lng, property.lat]).setHTML(html);
 
         // Fly to the property
         map.flyTo({
