@@ -44,8 +44,9 @@ function makeFullAddress(r: any) {
 
 async function main() {
     // Pull latest transaction per “address key”
-    // MVP key: PAON+SAON+STREET+POSTCODE (good enough for now)
+    // MVP key: PAON+SAON+STREET+POSTCODE+CategoryB (good enough for now)
     const raws = await prisma.rawPpdTransaction.findMany({
+        where: { ppdCategory: "B" },
         orderBy: { dateOfTransfer: "desc" },
     });
 
@@ -79,9 +80,11 @@ async function main() {
                 postcode: pc || null,
                 district: r.district ?? null,
                 propertyType: r.propertyType ?? "U",
+                tenure: r.tenure ?? null,
+                newBuild: r.newBuild ?? null,
                 lastSalePrice: r.price,
                 lastSaleDate: r.dateOfTransfer,
-                lat: centroid?.lat ?? 51.5,   // fallback if missing
+                lat: centroid?.lat ?? 51.5,
                 lng: centroid?.lng ?? -0.1,
             },
             create: {
@@ -91,6 +94,8 @@ async function main() {
                 postcode: pc || null,
                 district: r.district ?? null,
                 propertyType: r.propertyType ?? "U",
+                tenure: r.tenure ?? null,
+                newBuild: r.newBuild ?? null,
                 ownerName: "Unknown",
                 lat: centroid?.lat ?? 51.5,
                 lng: centroid?.lng ?? -0.1,

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Map from "@/components/Map";
 import type { Property } from "@/data/properties";
 import { propertyTypeLabel } from "@/lib/propertyType";
+import { tenureLabel } from "@/lib/tenure";
+import { newBuildLabel } from "@/lib/newBuild";
 
 export default function Home() {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -213,7 +215,7 @@ export default function Home() {
                         fontSize: "11px",
                       }}
                     >
-                      {propertyTypeLabel(p.propertyType)} • {p.ownerName}
+                      {propertyTypeLabel(p.propertyType)} • {tenureLabel(p.tenure)} • {newBuildLabel(p.newBuild)}
                     </div>
                   </li>
                 );

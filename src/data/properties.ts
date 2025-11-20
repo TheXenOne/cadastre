@@ -1,17 +1,22 @@
-// Core property type we’ll use across the app for now.
 export type Property = {
     id: number;
+    addressKey?: string | null;
+
     name: string;
     fullAddress: string;
+    postcode?: string | null;
+    district?: string | null;
+
+    propertyType: string;
+    tenure?: string | null;
+    newBuild?: string | null;
+
+    ownerName: string;
     lat: number;
     lng: number;
-    propertyType: "office" | "retail" | "industrial" | "residential_block" | "other";
-    ownerName: string;
-    contactSummary: string | null;
-
-    // New fields, all optional/nullable for now:
-    lastSalePrice: number | null;   // e.g. 1200000 means £1,200,000
-    lastSaleDate: string | null;    // e.g. "2020-05-10" or "May 2020"
-    rateableValue: number | null;   // business rates proxy
-    epcRating: string | null;       // e.g. "B", "C", "D"
+    lastSalePrice?: number | null;
+    lastSaleDate?: string | null;
+    rateableValue?: number | null;
+    epcRating?: string | null;
+    contactSummary?: string | null;
 };

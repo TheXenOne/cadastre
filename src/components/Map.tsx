@@ -5,6 +5,8 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Property } from "@/data/properties";
 import { propertyTypeLabel } from "@/lib/propertyType";
+import { tenureLabel } from "@/lib/tenure";
+import { newBuildLabel } from "@/lib/newBuild";
 
 type MapProps = {
     properties: Property[];
@@ -150,6 +152,16 @@ export default function Map({
         <div class="cad-popup-row">
           <span class="cad-popup-row-label">Type:</span>
           <span>${propertyTypeLabel(property.propertyType)}</span>
+        </div>
+
+        <div class="cad-popup-row">
+          <span class="cad-popup-row-label">Tenure:</span>
+          <span>${tenureLabel(property.tenure)}</span>
+        </div>
+
+        <div class="cad-popup-row">
+          <span class="cad-popup-row-label">Build:</span>
+          <span>${newBuildLabel(property.newBuild)}</span>
         </div>
 
         <div class="cad-popup-row">
