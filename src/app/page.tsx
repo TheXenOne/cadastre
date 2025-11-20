@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Map from "@/components/Map";
 import type { Property } from "@/data/properties";
 import { propertyTypeLabel } from "@/lib/propertyType";
@@ -18,6 +18,8 @@ export default function Home() {
   const [borough, setBorough] = useState("HARINGEY");
   const [boroughOptions, setBoroughOptions] = useState<string[]>([]);
   const [take, setTake] = useState(500);
+
+  const itemRefs = useRef<Record<number, HTMLLIElement | null>>({});
 
   // Fetch borough options from the API when the page first loads
   useEffect(() => {
@@ -63,6 +65,14 @@ export default function Home() {
 
     return () => controller.abort();
   }, [borough, take]);
+
+  useEffect(() => {
+    if (selectedPropertyId == null) return;
+    const el = itemRefs.current[selectedPropertyId];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [selectedPropertyId]);
 
   return (
     <main
@@ -189,6 +199,9 @@ export default function Home() {
                 return (
                   <li
                     key={p.id}
+                    ref={(el) => {
+                      itemRefs.current[p.id] = el;
+                    }}
                     onClick={() => setSelectedPropertyId(p.id)}
                     style={{
                       padding: "0.5rem 0.75rem",
