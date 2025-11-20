@@ -7,7 +7,7 @@ datasource db {
 }
 
 model Property {
-  id             Int      @id @default(autoincrement())
+  id             Int       @id @default(autoincrement())
   name           String
   fullAddress    String
   propertyType   String
