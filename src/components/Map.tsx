@@ -80,24 +80,16 @@ export default function Map({
         markersRef.current = {};
 
         properties.forEach((property) => {
-            // Create a custom clickable DOM element for the marker
+            const isSelected = property.id === selectedPropertyId;
+
+            // Create custom DOM element for the marker
             const el = document.createElement("button");
             el.type = "button";
-            el.className = "cad-marker";
-            el.style.width = "18px";
-            el.style.height = "18px";
-            el.style.borderRadius = "50%";
-            el.style.border = "2px solid #ffffff";
-            el.style.background = "#e74c3c";
-            el.style.cursor = "pointer";
-            el.style.padding = "0";
-            el.style.margin = "0";
-            el.style.pointerEvents = "auto"; // ensure clicks are captured
+            el.className = `cad-marker${isSelected ? " cad-marker--selected" : ""}`;
 
-            // Optional: visual hint when this marker is the selected one
-            if (property.id === selectedPropertyId) {
-                el.style.transform = "scale(1.15)";
-            }
+            const inner = document.createElement("div");
+            inner.className = "cad-marker__dot";
+            el.appendChild(inner);
 
             el.addEventListener("click", (e) => {
                 e.stopPropagation();
