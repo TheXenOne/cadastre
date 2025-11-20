@@ -70,7 +70,51 @@ export default function Map({
         };
     }, []);
 
-    // 2) Rebuild markers whenever the properties array changes
+    // 2) Load local authority boundaries once and add a fill + outline layer
+    useEffect(() => {
+        if (!mapRef.current) return;
+        const map = mapRef.current;
+
+        const addBoundaries = async () => {
+            const res = await fetch(
+                "/data/boundaries/local_authority_boundaries.geojson"
+            );
+            const geojson = await res.json();
+
+            if (map.getSource("local-authorities")) return;
+
+            map.addSource("local-authorities", {
+                type: "geojson",
+                data: geojson,
+            });
+
+            map.addLayer({
+                id: "la-fill",
+                type: "fill",
+                source: "local-authorities",
+                paint: {
+                    "fill-color": "#ffffff",
+                    "fill-opacity": 0.06,
+                },
+            });
+
+            map.addLayer({
+                id: "la-outline",
+                type: "line",
+                source: "local-authorities",
+                paint: {
+                    "line-color": "#000000ff",
+                    "line-width": 2.1,
+                    "line-opacity": 0.35,
+                },
+            });
+        };
+
+        if (map.isStyleLoaded()) addBoundaries();
+        else map.once("load", addBoundaries);
+    }, []);
+
+    // 3) Rebuild markers whenever the properties array changes
     useEffect(() => {
         if (!mapRef.current) return;
 
@@ -109,7 +153,7 @@ export default function Map({
         });
     }, [properties, selectedPropertyId, onSelectProperty]);
 
-    // 3) When selectedPropertyId changes, fly + open/update popup
+    // 4) When selectedPropertyId changes, fly + open/update popup
     useEffect(() => {
         if (!mapRef.current) return;
 
