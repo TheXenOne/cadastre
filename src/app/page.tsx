@@ -27,31 +27,40 @@ export default function Home() {
     fetchBoroughs();
   }, []);
 
-
-  // Fetch properties from the API when the page first loads
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchProperties = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const res = await fetch(`/api/properties?district=${borough}&take=${take}`);
-        if (!res.ok) {
-          throw new Error(`Request failed with status ${res.status}`);
-        }
+        const params = new URLSearchParams();
+        if (borough) params.set("district", borough);
+        params.set("take", String(take));
+
+        const res = await fetch(`/api/properties?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`Request failed with status ${res.status}`);
 
         const data = (await res.json()) as Property[];
         setProperties(data);
+        setSelectedPropertyId(null); // clear selection when filter changes
       } catch (err: any) {
-        console.error(err);
-        setError("Failed to load properties.");
+        if (err.name !== "AbortError") {
+          console.error(err);
+          setError("Failed to load properties.");
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchProperties();
-  }, []);
+
+    return () => controller.abort();
+  }, [borough, take]);
 
   return (
     <main
