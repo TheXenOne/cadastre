@@ -13,8 +13,20 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [district, setDistrict] = useState("HARINGEY");
+  const [borough, setBorough] = useState("HARINGEY");
+  const [boroughOptions, setBoroughOptions] = useState<string[]>([]);
   const [take, setTake] = useState(500);
+
+  // Fetch borough options from the API when the page first loads
+  useEffect(() => {
+    const fetchBoroughs = async () => {
+      const res = await fetch("/api/boroughs");
+      const data = (await res.json()) as string[];
+      setBoroughOptions(data);
+    };
+    fetchBoroughs();
+  }, []);
+
 
   // Fetch properties from the API when the page first loads
   useEffect(() => {
@@ -23,7 +35,7 @@ export default function Home() {
         setLoading(true);
         setError(null);
 
-        const res = await fetch(`/api/properties?district=${district}&take=${take}`);
+        const res = await fetch(`/api/properties?district=${borough}&take=${take}`);
         if (!res.ok) {
           throw new Error(`Request failed with status ${res.status}`);
         }
@@ -101,12 +113,13 @@ export default function Home() {
             <div style={{ marginBottom: 6, fontWeight: 600 }}>Filter</div>
 
             <label style={{ display: "block", fontSize: 12, opacity: 0.8 }}>
-              District
+              Borough / Local Authority
             </label>
             <input
-              value={district}
-              onChange={(e) => setDistrict(e.target.value.toUpperCase())}
-              placeholder="e.g. HARINGEY"
+              list="borough-options"
+              value={borough}
+              onChange={(e) => setBorough(e.target.value.toUpperCase())}
+              placeholder="Start typing…"
               style={{
                 width: "100%",
                 marginTop: 4,
@@ -119,6 +132,11 @@ export default function Home() {
                 fontSize: 13,
               }}
             />
+            <datalist id="borough-options">
+              {boroughOptions.map((b) => (
+                <option key={b} value={b} />
+              ))}
+            </datalist>
 
             <label style={{ display: "block", fontSize: 12, opacity: 0.8 }}>
               Max results
