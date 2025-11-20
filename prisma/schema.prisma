@@ -8,6 +8,7 @@ datasource db {
 
 model Property {
   id             Int       @id @default(autoincrement())
+  addressKey     String?   @unique
   name           String
   fullAddress    String
   propertyType   String
@@ -22,4 +23,25 @@ model Property {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model RawPpdTransaction {
+  id             String   @id // transaction unique identifier (GUID)
+  price          Int
+  dateOfTransfer DateTime
+  postcode       String?
+  propertyType   String? // D/S/T/F/O
+  newBuild       String? // Y/N
+  tenure         String? // F/L
+  paon           String?
+  saon           String?
+  street         String?
+  locality       String?
+  townCity       String?
+  district       String?
+  county         String?
+  ppdCategory    String? // A/B
+  recordStatus   String? // A/C/D (may be null in yearly)
+
+  ingestedAt DateTime @default(now())
 }

@@ -90,7 +90,7 @@ npx tsx prisma/seed.ts
 Run after adding new `.csv` files into `data/raw/ppd/`.
 Safe to re‑run (duplicates skipped).
 ```bash
-npx tsx prisma/ingest_ppd_2025.ts
+npx tsx prisma/ingest_ppd.ts
 ```
 
 ---
