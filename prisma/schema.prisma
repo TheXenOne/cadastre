@@ -11,6 +11,7 @@ model Property {
   addressKey     String?   @unique
   name           String
   fullAddress    String
+  district       String?
   propertyType   String
   ownerName      String
   lat            Float

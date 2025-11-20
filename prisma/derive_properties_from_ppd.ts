@@ -65,6 +65,7 @@ async function main() {
             update: {
                 name: makeName(r),
                 fullAddress: makeFullAddress(r),
+                district: r.district ?? null,
                 propertyType: r.propertyType ?? "U",
                 lastSalePrice: r.price,
                 lastSaleDate: r.dateOfTransfer,
@@ -73,10 +74,11 @@ async function main() {
                 addressKey: key,
                 name: makeName(r),
                 fullAddress: makeFullAddress(r),
+                district: r.district ?? null,
                 propertyType: r.propertyType ?? "U",
                 ownerName: "Unknown",
-                lat: 51.5,  // placeholder until geocoding step
-                lng: -0.1,  // placeholder until geocoding step
+                lat: 51.5,
+                lng: -0.1,
                 lastSalePrice: r.price,
                 lastSaleDate: r.dateOfTransfer,
                 rateableValue: null,

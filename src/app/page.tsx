@@ -19,7 +19,7 @@ export default function Home() {
         setLoading(true);
         setError(null);
 
-        const res = await fetch("/api/properties");
+        const res = await fetch("/api/properties?district=HARINGEY&take=500");
         if (!res.ok) {
           throw new Error(`Request failed with status ${res.status}`);
         }
