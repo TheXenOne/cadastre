@@ -15,6 +15,21 @@ type MapProps = {
     selectedBorough?: string;
 };
 
+function featureBounds(feature: any) {
+    const bounds = new maplibregl.LngLatBounds();
+
+    const addCoords = (coords: any) => {
+        if (typeof coords[0] === "number") {
+            bounds.extend(coords as [number, number]);
+        } else {
+            coords.forEach(addCoords);
+        }
+    };
+
+    addCoords(feature.geometry.coordinates);
+    return bounds;
+}
+
 export default function Map({
     properties,
     selectedPropertyId,
@@ -25,6 +40,7 @@ export default function Map({
     const mapRef = useRef<maplibregl.Map | null>(null);
     const markersRef = useRef<Record<number, maplibregl.Marker>>({});
     const popupRef = useRef<maplibregl.Popup | null>(null);
+    const boundariesRef = useRef<any | null>(null);
 
     // 1) Create the map once
     useEffect(() => {
@@ -83,10 +99,7 @@ export default function Map({
             return;
         }
 
-        // TODO: set this to the REAL property name in your GeoJSON
-        // common ones: "LAD24NM", "lad24nm", "NAME", "name"
         const nameProp = "LAD24NM";
-
         const filter: any = [
             "==",
             ["upcase", ["get", nameProp]],
@@ -96,6 +109,33 @@ export default function Map({
         map.setFilter("la-fill", filter);
         map.setFilter("la-outline", filter);
     }
+
+    useEffect(() => {
+        if (!mapRef.current || !boundariesLoaded || !selectedBorough) return;
+
+        const map = mapRef.current;
+        const geojson = boundariesRef.current;
+        if (!geojson?.features) return;
+
+        // Use the same property key you used for filtering
+        const nameProp = "LAD24NM"; // <-- keep in sync with your filter key
+
+        const feature = geojson.features.find(
+            (f: any) =>
+                String(f.properties?.[nameProp] ?? "").toUpperCase() ===
+                selectedBorough.toUpperCase()
+        );
+
+        if (!feature) return;
+
+        const bounds = featureBounds(feature);
+
+        map.fitBounds(bounds, {
+            padding: 40,
+            duration: 800,
+            maxZoom: 13,
+        });
+    }, [selectedBorough, boundariesLoaded]);
 
     // Load boundaries once
     useEffect(() => {
@@ -107,6 +147,7 @@ export default function Map({
                 "/data/boundaries/local_authority_boundaries.geojson"
             );
             const geojson = await res.json();
+            boundariesRef.current = geojson;
 
             if (map.getSource("local-authorities")) return;
 
