@@ -7,23 +7,27 @@ datasource db {
 }
 
 model Property {
-  id             Int       @id @default(autoincrement())
-  addressKey     String?   @unique
-  name           String
-  fullAddress    String
-  postcode       String?
-  district       String?
-  propertyType   String
-  tenure         String? // "F" or "L" from PPD
-  newBuild       String? // "Y" or "N" from PPD
-  ownerName      String
-  lat            Float
-  lng            Float
-  lastSalePrice  Int?
-  lastSaleDate   DateTime?
-  rateableValue  Int?
-  epcRating      String?
-  contactSummary String?
+  id                     Int       @id @default(autoincrement())
+  addressKey             String?   @unique
+  name                   String
+  fullAddress            String
+  postcode               String?
+  district               String?
+  propertyType           String
+  tenure                 String? // "F" or "L" from PPD
+  newBuild               String? // "Y" or "N" from PPD
+  isCorporateOwned       Boolean   @default(false)
+  corporateOwnerName     String?
+  corporateRegNo         String?
+  corporateOwnerCategory String?
+  ownerName              String
+  lat                    Float
+  lng                    Float
+  lastSalePrice          Int?
+  lastSaleDate           DateTime?
+  rateableValue          Int?
+  epcRating              String?
+  contactSummary         String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -54,6 +58,53 @@ model RawPostcodeCentroid {
   postcode String @id
   lat      Float
   lng      Float
+
+  ingestedAt DateTime @default(now())
+}
+
+model RawCcodRecord {
+  id Int @id @default(autoincrement())
+
+  titleNumber              String?
+  tenure                   String?
+  propertyAddress          String?
+  district                 String?
+  county                   String?
+  region                   String?
+  postcode                 String?
+  multipleAddressIndicator String?
+  pricePaid                Int?
+
+  proprietorName1         String?
+  companyRegistrationNo1  String?
+  proprietorshipCategory1 String?
+  proprietorAddress1_1    String?
+  proprietorAddress1_2    String?
+  proprietorAddress1_3    String?
+
+  proprietorName2         String?
+  companyRegistrationNo2  String?
+  proprietorshipCategory2 String?
+  proprietorAddress2_1    String?
+  proprietorAddress2_2    String?
+  proprietorAddress2_3    String?
+
+  proprietorName3         String?
+  companyRegistrationNo3  String?
+  proprietorshipCategory3 String?
+  proprietorAddress3_1    String?
+  proprietorAddress3_2    String?
+  proprietorAddress3_3    String?
+
+  proprietorName4         String?
+  companyRegistrationNo4  String?
+  proprietorshipCategory4 String?
+  proprietorAddress4_1    String?
+  proprietorAddress4_2    String?
+  proprietorAddress4_3    String?
+
+  dateProprietorAdded           DateTime?
+  additionalProprietorIndicator String?
 
   ingestedAt DateTime @default(now())
 }
