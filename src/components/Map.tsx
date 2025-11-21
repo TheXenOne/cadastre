@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Property } from "@/data/properties";
@@ -12,12 +12,14 @@ type MapProps = {
     properties: Property[];
     selectedPropertyId?: number;
     onSelectProperty?: (id: number | null) => void;
+    selectedBorough?: string;
 };
 
 export default function Map({
     properties,
     selectedPropertyId,
     onSelectProperty,
+    selectedBorough,
 }: MapProps) {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -70,7 +72,32 @@ export default function Map({
         };
     }, []);
 
-    // 2) Load local authority boundaries once and add a fill + outline layer
+    const [boundariesLoaded, setBoundariesLoaded] = useState(false);
+
+    function applyBoroughFilter(map: maplibregl.Map, borough?: string) {
+        if (!map.getLayer("la-fill") || !map.getLayer("la-outline")) return;
+
+        if (!borough) {
+            map.setFilter("la-fill", null);
+            map.setFilter("la-outline", null);
+            return;
+        }
+
+        // TODO: set this to the REAL property name in your GeoJSON
+        // common ones: "LAD24NM", "lad24nm", "NAME", "name"
+        const nameProp = "LAD24NM";
+
+        const filter: any = [
+            "==",
+            ["upcase", ["get", nameProp]],
+            borough.toUpperCase(),
+        ];
+
+        map.setFilter("la-fill", filter);
+        map.setFilter("la-outline", filter);
+    }
+
+    // Load boundaries once
     useEffect(() => {
         if (!mapRef.current) return;
         const map = mapRef.current;
@@ -104,15 +131,24 @@ export default function Map({
                 source: "local-authorities",
                 paint: {
                     "line-color": "#000000ff",
-                    "line-width": 2.1,
-                    "line-opacity": 0.35,
+                    "line-width": 3.0,
+                    "line-opacity": 0.38,
                 },
             });
+
+            setBoundariesLoaded(true);
+            applyBoroughFilter(map, selectedBorough); // apply immediately after load
         };
 
         if (map.isStyleLoaded()) addBoundaries();
         else map.once("load", addBoundaries);
     }, []);
+
+    // Re-apply filter whenever borough changes *after* boundaries exist
+    useEffect(() => {
+        if (!mapRef.current || !boundariesLoaded) return;
+        applyBoroughFilter(mapRef.current, selectedBorough);
+    }, [selectedBorough, boundariesLoaded]);
 
     // 3) Rebuild markers whenever the properties array changes
     useEffect(() => {

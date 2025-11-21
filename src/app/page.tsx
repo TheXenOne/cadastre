@@ -248,6 +248,7 @@ export default function Home() {
             properties={properties}
             selectedPropertyId={selectedPropertyId ?? undefined}
             onSelectProperty={setSelectedPropertyId}
+            selectedBorough={borough}
           />
         </div>
       </section>
