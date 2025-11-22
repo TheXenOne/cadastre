@@ -1,14 +1,15 @@
+// src/proxy.ts
 import { NextResponse } from "next/server";
 import { auth0 } from "./lib/auth0";
 
 export async function proxy(request: Request) {
     const url = new URL(request.url);
 
+    // If allowlist denies access, Auth0 sends back error=access_denied to callback
     if (url.pathname === "/auth/callback") {
         const err = url.searchParams.get("error");
         if (err === "access_denied") {
-            // just logout and return home (no query string)
-            return NextResponse.redirect(new URL("/auth/logout", url.origin));
+            return NextResponse.redirect(new URL("/denied", url.origin));
         }
     }
 
