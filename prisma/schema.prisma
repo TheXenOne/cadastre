@@ -108,3 +108,26 @@ model RawCcodRecord {
 
   ingestedAt DateTime @default(now())
 }
+
+model RawEpcRecord {
+  id Int @id @default(autoincrement())
+
+  // join keys
+  uprn     String?
+  postcode String?
+
+  // core EPC data
+  rating        String? // e.g. A–G
+  score         Int?
+  propertyType  String?
+  floorAreaSqm  Float?
+  lodgementDate DateTime?
+
+  address        String?
+  localAuthority String?
+
+  ingestedAt DateTime @default(now())
+
+  @@index([postcode])
+  @@index([uprn])
+}
