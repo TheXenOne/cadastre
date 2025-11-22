@@ -1,17 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useUser } from "@auth0/nextjs-auth0/client";
+
 import Map from "@/components/Map";
+import AuthButtons from "@/components/AuthButtons";
 import type { Property } from "@/data/properties";
+
 import { propertyTypeLabel } from "@/lib/propertyType";
 import { tenureLabel } from "@/lib/tenure";
 import { newBuildLabel } from "@/lib/newBuild";
 
 export default function Home() {
+  const { user, isLoading } = useUser();
+
   const [properties, setProperties] = useState<Property[]>([]);
-  const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(
-    null
-  );
+  const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,17 +25,21 @@ export default function Home() {
 
   const itemRefs = useRef<Record<number, HTMLLIElement | null>>({});
 
-  // Fetch borough options from the API when the page first loads
+  // Fetch borough options once (only when logged in)
   useEffect(() => {
+    if (!user) return;
     const fetchBoroughs = async () => {
       const res = await fetch("/api/boroughs");
       const data = (await res.json()) as string[];
       setBoroughOptions(data);
     };
     fetchBoroughs();
-  }, []);
+  }, [user]);
 
+  // Fetch properties when filter changes (only when logged in)
   useEffect(() => {
+    if (!user) return;
+
     const controller = new AbortController();
 
     const fetchProperties = async () => {
@@ -50,7 +58,7 @@ export default function Home() {
 
         const data = (await res.json()) as Property[];
         setProperties(data);
-        setSelectedPropertyId(null); // clear selection when filter changes
+        setSelectedPropertyId(null);
       } catch (err: any) {
         if (err.name !== "AbortError") {
           console.error(err);
@@ -62,28 +70,35 @@ export default function Home() {
     };
 
     fetchProperties();
-
     return () => controller.abort();
-  }, [borough, take]);
+  }, [user, borough, take]);
 
+  // Scroll selected item into view
   useEffect(() => {
     if (selectedPropertyId == null) return;
     const el = itemRefs.current[selectedPropertyId];
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [selectedPropertyId]);
 
+  // ---- gated rendering AFTER hooks ----
+  if (isLoading) {
+    return <main style={{ padding: 20 }}>Loading…</main>;
+  }
+
+  if (!user) {
+    return (
+      <main style={{ height: "100vh", display: "grid", placeItems: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <h1>Cadastre</h1>
+          <p>Please log in to use the map.</p>
+          <a href="/auth/login">Log in</a>
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <main
-      style={{
-        height: "100vh",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      {/* Top header bar */}
+    <main style={{ height: "100vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
       <header
         style={{
           padding: "1rem",
@@ -91,9 +106,13 @@ export default function Home() {
           backgroundColor: "#111",
           color: "#f5f5f5",
           fontSize: "14px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
         }}
       >
-        <h1>Cadastre – Local Map Prototype</h1>
+        <h1>Cadastre</h1>
+        <AuthButtons />
       </header>
 
       {/* Main content: sidebar + map */}
