@@ -25,6 +25,9 @@ export default function Home() {
 
   const itemRefs = useRef<Record<number, HTMLLIElement | null>>({});
 
+  const [bbox, setBbox] = useState<string | null>(null);
+  const bboxDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
   // Fetch borough options once (only when logged in)
   useEffect(() => {
     if (!user) return;
@@ -39,6 +42,7 @@ export default function Home() {
   // Fetch properties when filter changes (only when logged in)
   useEffect(() => {
     if (!user) return;
+    if (!bbox) return; // don't fetch until we have bounds
 
     const controller = new AbortController();
 
@@ -48,7 +52,7 @@ export default function Home() {
         setError(null);
 
         const params = new URLSearchParams();
-        if (borough) params.set("district", borough);
+        params.set("bbox", bbox);
         params.set("take", String(take));
 
         const res = await fetch(`/api/properties?${params.toString()}`, {
@@ -71,7 +75,7 @@ export default function Home() {
 
     fetchProperties();
     return () => controller.abort();
-  }, [user, borough, take]);
+  }, [user, bbox, take]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -268,7 +272,14 @@ export default function Home() {
             selectedPropertyId={selectedPropertyId ?? undefined}
             onSelectProperty={setSelectedPropertyId}
             selectedBorough={borough}
+            onBoundsChange={(nextBbox) => {
+              if (bboxDebounceRef.current) clearTimeout(bboxDebounceRef.current);
+              bboxDebounceRef.current = setTimeout(() => {
+                setBbox(nextBbox);
+              }, 250);
+            }}
           />
+
         </div>
       </section>
     </main>

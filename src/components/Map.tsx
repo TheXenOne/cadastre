@@ -11,8 +11,9 @@ import { newBuildLabel } from "@/lib/newBuild";
 type MapProps = {
     properties: Property[];
     selectedPropertyId?: number;
-    onSelectProperty?: (id: number | null) => void;
-    selectedBorough?: string;
+    onSelectProperty: (id: number | null) => void;
+    selectedBorough?: string; // TODO: Remove
+    onBoundsChange?: (bbox: string) => void;
 };
 
 function featureBounds(feature: any) {
@@ -35,6 +36,7 @@ export default function Map({
     selectedPropertyId,
     onSelectProperty,
     selectedBorough,
+    onBoundsChange
 }: MapProps) {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -69,6 +71,17 @@ export default function Map({
             },
             center: [-0.1, 51.5],
             zoom: 11,
+        });
+
+        map.on("moveend", () => {
+            const b = map.getBounds();
+            const west = b.getWest();
+            const south = b.getSouth();
+            const east = b.getEast();
+            const north = b.getNorth();
+
+            const bbox = `${west},${south},${east},${north}`;
+            onBoundsChange?.(bbox);
         });
 
         map.addControl(new maplibregl.NavigationControl(), "top-right");
