@@ -62,7 +62,136 @@ export default function Map({
             onBoundsChange?.(bbox);
         };
 
-        map.on("load", emitBounds);
+        map.on("load", () => {
+            // --- clustered source ---
+            map.addSource("properties", {
+                type: "geojson",
+                data: {
+                    type: "FeatureCollection",
+                    features: [],
+                },
+                cluster: true,
+                clusterRadius: 50,   // px; tweak later
+                clusterMaxZoom: 14,  // clusters stop past this zoom
+            });
+
+            // --- clusters (circles) ---
+            map.addLayer({
+                id: "clusters",
+                type: "circle",
+                source: "properties",
+                filter: ["has", "point_count"],
+                paint: {
+                    // size scales with count
+                    "circle-radius": [
+                        "step",
+                        ["get", "point_count"],
+                        14,   // <= first step
+                        50, 18,
+                        200, 24,
+                        1000, 30,
+                    ],
+                    "circle-color": [
+                        "step",
+                        ["get", "point_count"],
+                        "#5b8def",
+                        50, "#4f7fe0",
+                        200, "#3f6fce",
+                        1000, "#2f5eb8",
+                    ],
+                    "circle-opacity": 0.85,
+                    "circle-stroke-width": 1,
+                    "circle-stroke-color": "#0b0b0b",
+                },
+            });
+
+            // --- cluster count labels ---
+            map.addLayer({
+                id: "cluster-count",
+                type: "symbol",
+                source: "properties",
+                filter: ["has", "point_count"],
+                layout: {
+                    "text-field": "{point_count_abbreviated}",
+                    "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+                    "text-size": 12,
+                },
+                paint: {
+                    "text-color": "#ffffff",
+                },
+            });
+
+            // --- unclustered points (single properties) ---
+            map.addLayer({
+                id: "unclustered-point",
+                type: "circle",
+                source: "properties",
+                filter: ["!", ["has", "point_count"]],
+                paint: {
+                    "circle-radius": 6,
+                    "circle-color": "#7dd3fc",
+                    "circle-stroke-width": 1,
+                    "circle-stroke-color": "#0b0b0b",
+                },
+            });
+
+            // --- ensure clusters render on top of basemap layers ---
+            // (move to top in case style has symbol layers above)
+            try {
+                map.moveLayer("clusters");
+                map.moveLayer("cluster-count");
+                map.moveLayer("unclustered-point");
+            } catch (e) {
+                // ignore if already top
+            }
+
+            // --- click a cluster to zoom into it ---
+            map.on("click", "clusters", (e) => {
+                const features = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
+                const clusterFeature = features[0];
+                if (!clusterFeature) return;
+
+                const clusterId = clusterFeature.properties?.cluster_id;
+                const source = map.getSource("properties") as any;
+                if (!source || clusterId == null) return;
+
+                source.getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
+                    if (err) return;
+                    const [lng, lat] = (clusterFeature.geometry as any).coordinates;
+                    map.easeTo({ center: [lng, lat], zoom });
+                });
+            });
+
+            map.on("mouseenter", "clusters", () => {
+                map.getCanvas().style.cursor = "pointer";
+            });
+            map.on("mouseleave", "clusters", () => {
+                map.getCanvas().style.cursor = "";
+            });
+
+            // --- click a single (unclustered) point to select it ---
+            map.on("click", "unclustered-point", (e) => {
+                const features = map.queryRenderedFeatures(e.point, {
+                    layers: ["unclustered-point"],
+                });
+                const f = features[0];
+                if (!f) return;
+
+                const id = f.properties?.id;
+                if (id != null) {
+                    onSelectProperty(Number(id));
+                }
+            });
+
+            map.on("mouseenter", "unclustered-point", () => {
+                map.getCanvas().style.cursor = "pointer";
+            });
+            map.on("mouseleave", "unclustered-point", () => {
+                map.getCanvas().style.cursor = "";
+            });
+
+            // NOTE: do NOT create DOM markers anymore.
+        });
         map.on("moveend", emitBounds);
 
         map.addControl(new maplibregl.NavigationControl(), "top-right");
@@ -161,14 +290,36 @@ export default function Map({
                     onSelectProperty(property.id);
                 }
             });
-
-            const marker = new maplibregl.Marker({ element: el })
-                .setLngLat([property.lng, property.lat])
-                .addTo(map);
-
-            markersRef.current[property.id] = marker;
         });
     }, [properties, selectedPropertyId, onSelectProperty]);
+
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map) return;
+        const source = map.getSource("properties") as maplibregl.GeoJSONSource | undefined;
+        if (!source) return;
+
+        const geojson = {
+            type: "FeatureCollection" as const,
+            features: properties.map((p) => ({
+                type: "Feature" as const,
+                geometry: {
+                    type: "Point" as const,
+                    coordinates: [p.lng, p.lat],
+                },
+                properties: {
+                    id: p.id,
+                    name: p.name,
+                    fullAddress: p.fullAddress,
+                    lastSalePrice: p.lastSalePrice,
+                    lastSaleDate: p.lastSaleDate,
+                    epcRating: p.epcRating,
+                },
+            })),
+        };
+
+        source.setData(geojson);
+    }, [properties]);
 
     // 4) When selectedPropertyId changes, fly + open/update popup
     useEffect(() => {
@@ -257,7 +408,7 @@ export default function Map({
 
         // Create the popup once, then just update it
         if (!popupRef.current) {
-            const popup = new maplibregl.Popup({ offset: 25 });
+            const popup = new maplibregl.Popup({ offset: 25, closeOnClick: false });
 
             popup.on("close", () => {
                 if (onSelectProperty) onSelectProperty(null);

@@ -49,7 +49,12 @@ export default function Home() {
 
         const data = (await res.json()) as { properties: Property[]; nextCursor: number | null };
         setProperties(data.properties);
-        setSelectedPropertyId(null);
+
+        // keep selection if it's still in the new result set
+        setSelectedPropertyId((prev) => {
+          if (prev == null) return null;
+          return data.properties.some((p) => p.id === prev) ? prev : null;
+        });
       } catch (err: any) {
         if (err.name !== "AbortError") {
           console.error(err);
