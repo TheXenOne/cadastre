@@ -10,8 +10,7 @@ set DEVLOG=%LOGDIR%\devserver.log
 if not exist "%LOGDIR%" mkdir "%LOGDIR%"
 
 echo.
-echo === Cadastre STAGING code update (debug) ===
-
+echo === Cadastre STAGING code update ===
 cd /d "%REPO%"
 
 REM --- stop anything on port 3000 ---
@@ -25,6 +24,7 @@ REM --- pull latest main ---
 echo Pulling latest main...
 git checkout main >nul 2>&1
 git pull
+if errorlevel 1 goto :fail
 
 REM --- install deps ---
 echo Installing deps...
@@ -36,14 +36,21 @@ echo Prisma generate...
 npx prisma generate
 if errorlevel 1 goto :fail
 
-REM --- header for log ---
-echo.>> "%DEVLOG%"
-echo ===== %DATE% %TIME% : restart =====>> "%DEVLOG%"
+REM --- update staging notes ---
+for /f %%s in ('git rev-parse --short HEAD') do set SHA=%%s
+for /f %%t in ('powershell -NoProfile -Command "Get-Date -Format s"') do set TS=%%t
+echo %TS%  code-only  sha=%SHA%>> "%NOTES%"
 
-REM --- start dev server FOREGROUND with logging ---
-echo Starting Next dev server (this window will stay open)...
-echo If it crashes, check: %DEVLOG%
-call npm run dev >> "%DEVLOG%" 2>&1
+REM --- log header ---
+echo.>> "%DEVLOG%"
+echo ===== %DATE% %TIME% : code-only restart sha=%SHA% =====>> "%DEVLOG%"
+
+REM --- start dev server (foreground, logs to file) ---
+echo.
+echo Starting Next dev server...
+echo (This window must stay open. Output -> %DEVLOG%)
+echo.
+npm run dev > "%DEVLOG%" 2>&1
 
 goto :eof
 
@@ -51,4 +58,5 @@ goto :eof
 echo.
 echo Script failed before starting server. Check output above.
 echo.
+pause
 endlocal
