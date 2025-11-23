@@ -1,5 +1,5 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal
 
 REM --- config ---
 set REPO=C:\Repos\cadastre
@@ -10,9 +10,8 @@ set DEVLOG=%LOGDIR%\devserver.log
 if not exist "%LOGDIR%" mkdir "%LOGDIR%"
 
 echo.
-echo === Cadastre STAGING code update ===
+echo === Cadastre STAGING code update (debug) ===
 
-REM --- go to repo ---
 cd /d "%REPO%"
 
 REM --- stop anything on port 3000 ---
@@ -30,27 +29,26 @@ git pull
 REM --- install deps ---
 echo Installing deps...
 npm install
+if errorlevel 1 goto :fail
 
 REM --- prisma generate ---
 echo Prisma generate...
 npx prisma generate
+if errorlevel 1 goto :fail
 
-REM --- clear previous log header ---
+REM --- header for log ---
 echo.>> "%DEVLOG%"
 echo ===== %DATE% %TIME% : restart =====>> "%DEVLOG%"
 
-REM --- start dev server with logging ---
-echo Starting Next dev server...
-start "cadastre-dev" cmd /k ^
-  "cd /d %REPO% && npm run dev >> %DEVLOG% 2>&1"
+REM --- start dev server FOREGROUND with logging ---
+echo Starting Next dev server (this window will stay open)...
+echo If it crashes, check: %DEVLOG%
+call npm run dev >> "%DEVLOG%" 2>&1
 
-REM --- update staging notes ---
-for /f %%s in ('git rev-parse --short HEAD') do set SHA=%%s
-for /f %%t in ('powershell -NoProfile -Command "Get-Date -Format s"') do set TS=%%t
-echo %TS%  code-only  sha=%SHA%>> "%NOTES%"
+goto :eof
 
-echo Done. If the server doesn't stay up, open:
-echo   %DEVLOG%
-echo to see the crash reason.
+:fail
+echo.
+echo Script failed before starting server. Check output above.
 echo.
 endlocal
