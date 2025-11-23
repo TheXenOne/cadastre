@@ -56,16 +56,14 @@ export default function Map({
             zoom: 11,
         });
 
-        map.on("moveend", () => {
+        const emitBounds = () => {
             const b = map.getBounds();
-            const west = b.getWest();
-            const south = b.getSouth();
-            const east = b.getEast();
-            const north = b.getNorth();
-
-            const bbox = `${west},${south},${east},${north}`;
+            const bbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
             onBoundsChange?.(bbox);
-        });
+        };
+
+        map.on("load", emitBounds);
+        map.on("moveend", emitBounds);
 
         map.addControl(new maplibregl.NavigationControl(), "top-right");
 

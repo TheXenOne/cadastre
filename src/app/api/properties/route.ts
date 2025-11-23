@@ -21,11 +21,29 @@ export async function GET(req: Request) {
         }
     }
 
+    // cursor pagination
+    const cursorParam = searchParams.get("cursor"); // Property.id
+    const cursorId = cursorParam ? Number(cursorParam) : null;
+
     const properties = await prisma.property.findMany({
         where: bboxWhere ?? undefined,
-        orderBy: { lastSaleDate: "desc" },
+        orderBy: [
+            { lastSaleDate: "desc" },
+            { id: "desc" }, // tie-breaker for stable paging
+        ],
         take,
+        ...(cursorId
+            ? {
+                cursor: { id: cursorId },
+                skip: 1, // don't repeat the cursor row
+            }
+            : {}),
     });
 
-    return NextResponse.json(properties);
+    const nextCursor =
+        properties.length === take
+            ? properties[properties.length - 1].id
+            : null;
+
+    return NextResponse.json({ properties, nextCursor });
 }

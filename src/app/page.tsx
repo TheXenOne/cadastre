@@ -47,8 +47,8 @@ export default function Home() {
         });
         if (!res.ok) throw new Error(`Request failed with status ${res.status}`);
 
-        const data = (await res.json()) as Property[];
-        setProperties(data);
+        const data = (await res.json()) as { properties: Property[]; nextCursor: number | null };
+        setProperties(data.properties);
         setSelectedPropertyId(null);
       } catch (err: any) {
         if (err.name !== "AbortError") {
