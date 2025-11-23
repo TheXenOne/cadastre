@@ -26,6 +26,7 @@ export default function Map({
     const markersRef = useRef<Record<number, maplibregl.Marker>>({});
     const popupRef = useRef<maplibregl.Popup | null>(null);
     const boundariesRef = useRef<any | null>(null);
+    const lastFlyToIdRef = useRef<number | null>(null);
 
     // 1) Create the map once
     useEffect(() => {
@@ -146,28 +147,99 @@ export default function Map({
             }
 
             // --- click a cluster to zoom into it ---
-            map.on("click", "clusters", (e) => {
-                const features = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
-                const clusterFeature = features[0];
+            const zoomIntoCluster = (e: any) => {
+                // When you bind click to a layer, MapLibre puts the hit features on the event.
+                const clusterFeature = e.features?.[0];
                 if (!clusterFeature) return;
 
-                const clusterId = clusterFeature.properties?.cluster_id;
+                const clusterIdRaw = clusterFeature.properties?.cluster_id;
+                const clusterId = Number(clusterIdRaw);
+                if (!Number.isFinite(clusterId)) return;
+
                 const source = map.getSource("properties") as any;
-                if (!source || clusterId == null) return;
+                if (!source?.getClusterExpansionZoom) return;
 
                 source.getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
-                    if (err) return;
+                    if (err) {
+                        console.error("getClusterExpansionZoom error", err);
+                        return;
+                    }
                     const [lng, lat] = (clusterFeature.geometry as any).coordinates;
                     map.easeTo({ center: [lng, lat], zoom });
                 });
+            };
+
+            // ---- DEBUG: log everything under cursor on any click ----
+            map.on("click", (e) => {
+                const hits = map.queryRenderedFeatures(e.point);
+
+                console.log("CLICK @", e.lngLat, "hits:", hits.length);
+
+                console.log(
+                    hits.map((h) => ({
+                        layer: h.layer?.id,
+                        type: h.layer?.type,
+                        source: h.source,
+                        sourceLayer: h.sourceLayer,
+                        props: h.properties,
+                    }))
+                );
             });
 
-            map.on("mouseenter", "clusters", () => {
-                map.getCanvas().style.cursor = "pointer";
+            map.on("click", (e) => {
+                const hits = map.queryRenderedFeatures(e.point);
+
+                // only features from our clustered source
+                const propHits = hits.filter((h) => h.source === "properties");
+                if (propHits.length === 0) return;
+
+                // Prefer a cluster hit (either layer could be first)
+                const clusterHit = propHits.find((h) => h.properties?.cluster_id != null);
+
+                if (clusterHit) {
+                    const clusterId = Number(clusterHit.properties.cluster_id);
+                    const source = map.getSource("properties") as any;
+                    if (!source) return;
+
+                    const doZoom = (zoom: number) => {
+                        const [lng, lat] = (clusterHit.geometry as any).coordinates;
+                        map.easeTo({ center: [lng, lat], zoom });
+                    };
+
+                    // Support both Promise-style and callback-style APIs
+                    const maybePromise = source.getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
+                        if (err) {
+                            console.error("getClusterExpansionZoom error", err);
+                            return;
+                        }
+                        doZoom(zoom);
+                    });
+
+                    if (maybePromise && typeof maybePromise.then === "function") {
+                        maybePromise.then((zoom: number) => doZoom(zoom)).catch((err: any) => {
+                            console.error("getClusterExpansionZoom promise error", err);
+                        });
+                    }
+
+                    return;
+                }
+
+                // Otherwise it's an unclustered property point
+                const pointHit = propHits.find((h) => h.properties?.id != null);
+                if (pointHit) {
+                    onSelectProperty(Number(pointHit.properties.id));
+                }
             });
-            map.on("mouseleave", "clusters", () => {
-                map.getCanvas().style.cursor = "";
-            });
+
+            const setPointer = () => (map.getCanvas().style.cursor = "pointer");
+            const clearPointer = () => (map.getCanvas().style.cursor = "");
+
+            map.on("mouseenter", "clusters", setPointer);
+            map.on("mouseleave", "clusters", clearPointer);
+            map.on("mouseenter", "cluster-count", setPointer);
+            map.on("mouseleave", "cluster-count", clearPointer);
+            map.on("mouseenter", "unclustered-point", setPointer);
+            map.on("mouseleave", "unclustered-point", clearPointer);
 
             // --- click a single (unclustered) point to select it ---
             map.on("click", "unclustered-point", (e) => {
@@ -232,26 +304,36 @@ export default function Map({
                 data: geojson,
             });
 
-            map.addLayer({
-                id: "la-fill",
-                type: "fill",
-                source: "local-authorities",
-                paint: {
-                    "fill-color": "#ffffff",
-                    "fill-opacity": 0.06,
-                },
-            });
+            const beforeId = map.getLayer("clusters") ? "clusters" : undefined;
 
-            map.addLayer({
-                id: "la-outline",
-                type: "line",
-                source: "local-authorities",
-                paint: {
-                    "line-color": "#000000ff",
-                    "line-width": 3.0,
-                    "line-opacity": 0.38,
+            // fill BELOW clusters
+            map.addLayer(
+                {
+                    id: "la-fill",
+                    type: "fill",
+                    source: "local-authorities",
+                    paint: {
+                        "fill-color": "#ffffff",
+                        "fill-opacity": 0.06,
+                    },
                 },
-            });
+                beforeId
+            );
+
+            // outline BELOW clusters
+            map.addLayer(
+                {
+                    id: "la-outline",
+                    type: "line",
+                    source: "local-authorities",
+                    paint: {
+                        "line-color": "#000000ff",
+                        "line-width": 3.0,
+                        "line-opacity": 0.38,
+                    },
+                },
+                beforeId
+            );
 
             setBoundariesLoaded(true);
         };
@@ -329,6 +411,7 @@ export default function Map({
 
         // If nothing selected, close any existing popup and stop
         if (selectedPropertyId == null) {
+            lastFlyToIdRef.current = null;
             if (popupRef.current) {
                 popupRef.current.remove();
                 popupRef.current = null;
@@ -420,12 +503,15 @@ export default function Map({
 
         popupRef.current.setLngLat([property.lng, property.lat]).setHTML(html);
 
-        // Fly to the property
-        map.flyTo({
-            center: [property.lng, property.lat],
-            zoom: 14,
-            essential: true,
-        });
+        // Fly to the property ONLY when the selection ID changes
+        if (lastFlyToIdRef.current !== selectedPropertyId) {
+            map.flyTo({
+                center: [property.lng, property.lat],
+                zoom: 14,
+                essential: true,
+            });
+            lastFlyToIdRef.current = selectedPropertyId;
+        }
     }, [selectedPropertyId, properties, onSelectProperty]);
 
     return (
