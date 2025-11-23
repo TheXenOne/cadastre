@@ -28,12 +28,12 @@ if errorlevel 1 goto :fail
 
 REM --- install deps ---
 echo Installing deps...
-npm install
+call npm install
 if errorlevel 1 goto :fail
 
 REM --- prisma generate ---
 echo Prisma generate...
-npx prisma generate
+call npx prisma generate
 if errorlevel 1 goto :fail
 
 REM --- update staging notes ---
@@ -50,7 +50,7 @@ echo.
 echo Starting Next dev server...
 echo (This window must stay open. Output -> %DEVLOG%)
 echo.
-npm run dev > "%DEVLOG%" 2>&1
+call npm run dev > "%DEVLOG%" 2>&1
 
 goto :eof
 
