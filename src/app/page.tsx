@@ -19,25 +19,12 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [borough, setBorough] = useState("HARINGEY");
-  const [boroughOptions, setBoroughOptions] = useState<string[]>([]);
   const [take, setTake] = useState(500);
 
   const itemRefs = useRef<Record<number, HTMLLIElement | null>>({});
 
   const [bbox, setBbox] = useState<string | null>(null);
   const bboxDebounceRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Fetch borough options once (only when logged in)
-  useEffect(() => {
-    if (!user) return;
-    const fetchBoroughs = async () => {
-      const res = await fetch("/api/boroughs");
-      const data = (await res.json()) as string[];
-      setBoroughOptions(data);
-    };
-    fetchBoroughs();
-  }, [user]);
 
   // Fetch properties when filter changes (only when logged in)
   useEffect(() => {
@@ -159,29 +146,6 @@ export default function Home() {
             <label style={{ display: "block", fontSize: 12, opacity: 0.8 }}>
               Borough / Local Authority
             </label>
-            <input
-              list="borough-options"
-              value={borough}
-              onChange={(e) => setBorough(e.target.value.toUpperCase())}
-              placeholder="Start typing…"
-              style={{
-                width: "100%",
-                marginTop: 4,
-                marginBottom: 8,
-                padding: "6px 8px",
-                borderRadius: 6,
-                border: "1px solid #444",
-                background: "#111",
-                color: "#fff",
-                fontSize: 13,
-              }}
-            />
-            <datalist id="borough-options">
-              {boroughOptions.map((b) => (
-                <option key={b} value={b} />
-              ))}
-            </datalist>
-
             <label style={{ display: "block", fontSize: 12, opacity: 0.8 }}>
               Max results
             </label>
@@ -271,7 +235,6 @@ export default function Home() {
             properties={properties}
             selectedPropertyId={selectedPropertyId ?? undefined}
             onSelectProperty={setSelectedPropertyId}
-            selectedBorough={borough}
             onBoundsChange={(nextBbox) => {
               if (bboxDebounceRef.current) clearTimeout(bboxDebounceRef.current);
               bboxDebounceRef.current = setTimeout(() => {

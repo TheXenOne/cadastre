@@ -12,30 +12,13 @@ type MapProps = {
     properties: Property[];
     selectedPropertyId?: number;
     onSelectProperty: (id: number | null) => void;
-    selectedBorough?: string; // TODO: Remove
     onBoundsChange?: (bbox: string) => void;
 };
-
-function featureBounds(feature: any) {
-    const bounds = new maplibregl.LngLatBounds();
-
-    const addCoords = (coords: any) => {
-        if (typeof coords[0] === "number") {
-            bounds.extend(coords as [number, number]);
-        } else {
-            coords.forEach(addCoords);
-        }
-    };
-
-    addCoords(feature.geometry.coordinates);
-    return bounds;
-}
 
 export default function Map({
     properties,
     selectedPropertyId,
     onSelectProperty,
-    selectedBorough,
     onBoundsChange
 }: MapProps) {
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -103,53 +86,6 @@ export default function Map({
 
     const [boundariesLoaded, setBoundariesLoaded] = useState(false);
 
-    function applyBoroughFilter(map: maplibregl.Map, borough?: string) {
-        if (!map.getLayer("la-fill") || !map.getLayer("la-outline")) return;
-
-        if (!borough) {
-            map.setFilter("la-fill", null);
-            map.setFilter("la-outline", null);
-            return;
-        }
-
-        const nameProp = "LAD24NM";
-        const filter: any = [
-            "==",
-            ["upcase", ["get", nameProp]],
-            borough.toUpperCase(),
-        ];
-
-        map.setFilter("la-fill", filter);
-        map.setFilter("la-outline", filter);
-    }
-
-    useEffect(() => {
-        if (!mapRef.current || !boundariesLoaded || !selectedBorough) return;
-
-        const map = mapRef.current;
-        const geojson = boundariesRef.current;
-        if (!geojson?.features) return;
-
-        // Use the same property key you used for filtering
-        const nameProp = "LAD24NM"; // <-- keep in sync with your filter key
-
-        const feature = geojson.features.find(
-            (f: any) =>
-                String(f.properties?.[nameProp] ?? "").toUpperCase() ===
-                selectedBorough.toUpperCase()
-        );
-
-        if (!feature) return;
-
-        const bounds = featureBounds(feature);
-
-        map.fitBounds(bounds, {
-            padding: 40,
-            duration: 800,
-            maxZoom: 13,
-        });
-    }, [selectedBorough, boundariesLoaded]);
-
     // Load boundaries once
     useEffect(() => {
         if (!mapRef.current) return;
@@ -191,18 +127,11 @@ export default function Map({
             });
 
             setBoundariesLoaded(true);
-            applyBoroughFilter(map, selectedBorough); // apply immediately after load
         };
 
         if (map.isStyleLoaded()) addBoundaries();
         else map.once("load", addBoundaries);
     }, []);
-
-    // Re-apply filter whenever borough changes *after* boundaries exist
-    useEffect(() => {
-        if (!mapRef.current || !boundariesLoaded) return;
-        applyBoroughFilter(mapRef.current, selectedBorough);
-    }, [selectedBorough, boundariesLoaded]);
 
     // 3) Rebuild markers whenever the properties array changes
     useEffect(() => {
