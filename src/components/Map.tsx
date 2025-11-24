@@ -26,6 +26,7 @@ export default function Map({
     const popupRef = useRef<maplibregl.Popup | null>(null);
     const boundariesRef = useRef<any | null>(null);
     const lastFlyToIdRef = useRef<number | null>(null);
+    const lastSelectedRef = useRef<Property | null>(null);
 
     // 1) Create the map once
     useEffect(() => {
@@ -145,28 +146,26 @@ export default function Map({
                 // ignore if already top
             }
 
-            // --- click a cluster to zoom into it ---
-            const zoomIntoCluster = (e: any) => {
-                // When you bind click to a layer, MapLibre puts the hit features on the event.
-                const clusterFeature = e.features?.[0];
-                if (!clusterFeature) return;
+            // --- selected property overlay (always on top) ---
+            map.addSource("selected-property", {
+                type: "geojson",
+                data: {
+                    type: "FeatureCollection",
+                    features: [],
+                },
+            });
 
-                const clusterIdRaw = clusterFeature.properties?.cluster_id;
-                const clusterId = Number(clusterIdRaw);
-                if (!Number.isFinite(clusterId)) return;
-
-                const source = map.getSource("properties") as any;
-                if (!source?.getClusterExpansionZoom) return;
-
-                source.getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
-                    if (err) {
-                        console.error("getClusterExpansionZoom error", err);
-                        return;
-                    }
-                    const [lng, lat] = (clusterFeature.geometry as any).coordinates;
-                    map.easeTo({ center: [lng, lat], zoom });
-                });
-            };
+            map.addLayer({
+                id: "selected-property-layer",
+                type: "circle",
+                source: "selected-property",
+                paint: {
+                    "circle-radius": 8,
+                    "circle-color": "#fbbf24",       // amber highlight
+                    "circle-stroke-width": 2,
+                    "circle-stroke-color": "#0b0b0b",
+                },
+            });
 
             // ---- DEBUG: log everything under cursor on any click ----
             map.on("click", (e) => {
@@ -367,6 +366,38 @@ export default function Map({
 
         source.setData(geojson);
     }, [properties]);
+
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map) return;
+        const src = map.getSource("selected-property") as maplibregl.GeoJSONSource | undefined;
+        if (!src) return;
+
+        // if selection cleared, clear overlay
+        if (selectedPropertyId == null) {
+            lastSelectedRef.current = null;
+            src.setData({ type: "FeatureCollection", features: [] });
+            return;
+        }
+
+        // try to find selected in current viewport set
+        const p = properties.find((x) => x.id === selectedPropertyId) ?? lastSelectedRef.current;
+        if (!p) return;
+
+        // remember latest known selected coords/details
+        lastSelectedRef.current = p;
+
+        src.setData({
+            type: "FeatureCollection",
+            features: [
+                {
+                    type: "Feature",
+                    geometry: { type: "Point", coordinates: [p.lng, p.lat] },
+                    properties: { id: p.id },
+                },
+            ],
+        });
+    }, [selectedPropertyId, properties]);
 
     // 4) When selectedPropertyId changes, fly + open/update popup
     useEffect(() => {
