@@ -19,12 +19,11 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [take, setTake] = useState(500);
-
   const itemRefs = useRef<Record<number, HTMLLIElement | null>>({});
 
   const [bbox, setBbox] = useState<string | null>(null);
   const bboxDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const [zoom, setZoom] = useState<number>(11);
 
   // Fetch properties when filter changes (only when logged in)
   useEffect(() => {
@@ -38,9 +37,16 @@ export default function Home() {
         setLoading(true);
         setError(null);
 
+        const autoTake =
+          zoom >= 15 ? 500 :
+            zoom >= 13 ? 1200 :
+              zoom >= 11 ? 2500 :
+                zoom >= 9 ? 6000 :
+                  12000;
+
         const params = new URLSearchParams();
         params.set("bbox", bbox);
-        params.set("take", String(take));
+        params.set("take", String(autoTake));
 
         const res = await fetch(`/api/properties?${params.toString()}`, {
           signal: controller.signal,
@@ -67,7 +73,7 @@ export default function Home() {
 
     fetchProperties();
     return () => controller.abort();
-  }, [user, bbox, take]);
+  }, [user, bbox, zoom]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -151,27 +157,6 @@ export default function Home() {
             <label style={{ display: "block", fontSize: 12, opacity: 0.8 }}>
               Borough / Local Authority
             </label>
-            <label style={{ display: "block", fontSize: 12, opacity: 0.8 }}>
-              Max results
-            </label>
-            <input
-              type="number"
-              value={take}
-              onChange={(e) => setTake(Number(e.target.value) || 100)}
-              min={50}
-              max={5000}
-              step={50}
-              style={{
-                width: "100%",
-                marginTop: 4,
-                padding: "6px 8px",
-                borderRadius: 6,
-                border: "1px solid #444",
-                background: "#111",
-                color: "#fff",
-                fontSize: 13,
-              }}
-            />
           </div>
 
           {error && (
@@ -240,13 +225,15 @@ export default function Home() {
             properties={properties}
             selectedPropertyId={selectedPropertyId ?? undefined}
             onSelectProperty={setSelectedPropertyId}
-            onBoundsChange={(nextBbox) => {
+            onBoundsChange={(nextBbox, nextZoom) => {
               if (bboxDebounceRef.current) clearTimeout(bboxDebounceRef.current);
               bboxDebounceRef.current = setTimeout(() => {
                 setBbox(nextBbox);
+                setZoom(nextZoom);
               }, 250);
             }}
           />
+
 
         </div>
       </section>

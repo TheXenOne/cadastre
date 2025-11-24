@@ -12,7 +12,7 @@ type MapProps = {
     properties: Property[];
     selectedPropertyId?: number;
     onSelectProperty: (id: number | null) => void;
-    onBoundsChange?: (bbox: string) => void;
+    onBoundsChange?: (bbox: string, zoom: number) => void;
 };
 
 export default function Map({
@@ -60,7 +60,8 @@ export default function Map({
         const emitBounds = () => {
             const b = map.getBounds();
             const bbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
-            onBoundsChange?.(bbox);
+            const zoom = map.getZoom();
+            onBoundsChange?.(bbox, zoom);
         };
 
         map.on("load", () => {
