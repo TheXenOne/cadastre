@@ -23,7 +23,6 @@ export default function Map({
 }: MapProps) {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
-    const markersRef = useRef<Record<number, maplibregl.Marker>>({});
     const popupRef = useRef<maplibregl.Popup | null>(null);
     const boundariesRef = useRef<any | null>(null);
     const lastFlyToIdRef = useRef<number | null>(null);
@@ -276,8 +275,7 @@ export default function Map({
                 popupRef.current.remove();
                 popupRef.current = null;
             }
-            Object.values(markersRef.current).forEach((m) => m.remove());
-            markersRef.current = {};
+
             map.remove();
             mapRef.current = null;
         };
@@ -341,39 +339,6 @@ export default function Map({
         if (map.isStyleLoaded()) addBoundaries();
         else map.once("load", addBoundaries);
     }, []);
-
-    // 3) Rebuild markers whenever the properties array changes
-    useEffect(() => {
-        if (!mapRef.current) return;
-
-        const map = mapRef.current;
-
-        // Remove existing markers
-        Object.values(markersRef.current).forEach((marker) => {
-            marker.remove();
-        });
-        markersRef.current = {};
-
-        properties.forEach((property) => {
-            const isSelected = property.id === selectedPropertyId;
-
-            // Create custom DOM element for the marker
-            const el = document.createElement("button");
-            el.type = "button";
-            el.className = `cad-marker${isSelected ? " cad-marker--selected" : ""}`;
-
-            const inner = document.createElement("div");
-            inner.className = "cad-marker__dot";
-            el.appendChild(inner);
-
-            el.addEventListener("click", (e) => {
-                e.stopPropagation();
-                if (onSelectProperty) {
-                    onSelectProperty(property.id);
-                }
-            });
-        });
-    }, [properties, selectedPropertyId, onSelectProperty]);
 
     useEffect(() => {
         const map = mapRef.current;
