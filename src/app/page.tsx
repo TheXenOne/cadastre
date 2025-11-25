@@ -25,6 +25,9 @@ export default function Home() {
   const bboxDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const [zoom, setZoom] = useState<number>(11);
 
+  type ServerCluster = { lng: number; lat: number; count: number; clusterId: number | null };
+  const [serverClusters, setServerClusters] = useState<ServerCluster[]>([]);
+
   // Fetch properties when filter changes (only when logged in)
   useEffect(() => {
     if (!user) return;
@@ -32,11 +35,36 @@ export default function Home() {
 
     const controller = new AbortController();
 
-    const fetchProperties = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
 
+        // ---- LOW ZOOM: server-side clusters (truthy, no take limit) ----
+        if (zoom < 12) {
+          const params = new URLSearchParams();
+          params.set("bbox", bbox);
+          params.set("zoom", String(zoom));
+
+          console.log(`[client] LOW-ZOOM request bbox=${bbox} zoom=${zoom}`);
+
+          const res = await fetch(`/api/property-clusters?${params.toString()}`, {
+            signal: controller.signal,
+          });
+          if (!res.ok) throw new Error(`Request failed with status ${res.status}`);
+
+          const data = (await res.json()) as { clusters: ServerCluster[] };
+
+          const maxCount = Math.max(...data.clusters.map(c => c.count));
+          console.log(`[client] LOW-ZOOM clusters=${data.clusters.length} maxCount=${maxCount}`);
+
+          setServerClusters(data.clusters);
+
+          // IMPORTANT: don't clobber properties at low zoom
+          return;
+        }
+
+        // ---- HIGH ZOOM: real points (your existing autoTake logic) ----
         const autoTake =
           zoom >= 15 ? 500 :
             zoom >= 13 ? 1200 :
@@ -54,7 +82,9 @@ export default function Home() {
         if (!res.ok) throw new Error(`Request failed with status ${res.status}`);
 
         const data = (await res.json()) as { properties: Property[]; nextCursor: number | null };
+
         setProperties(data.properties);
+        setServerClusters([]); // clear server clusters when zoomed in
 
         // keep selection if it's still in the new result set
         setSelectedPropertyId((prev) => {
@@ -71,7 +101,7 @@ export default function Home() {
       }
     };
 
-    fetchProperties();
+    fetchData();
     return () => controller.abort();
   }, [user, bbox, zoom]);
 
@@ -165,7 +195,9 @@ export default function Home() {
 
           {!loading && !error && properties.length === 0 && (
             <div style={{ padding: "0.75rem", opacity: 0.8 }}>
-              No properties found.
+              {zoom < 12
+                ? "Zoom in to see individual properties."
+                : "No properties found."}
             </div>
           )}
 
@@ -223,6 +255,7 @@ export default function Home() {
         >
           <Map
             properties={properties}
+            serverClusters={serverClusters}
             selectedPropertyId={selectedPropertyId ?? undefined}
             onSelectProperty={setSelectedPropertyId}
             onBoundsChange={(nextBbox, nextZoom) => {
@@ -233,8 +266,6 @@ export default function Home() {
               }, 250);
             }}
           />
-
-
         </div>
       </section>
     </main>

@@ -8,8 +8,11 @@ import { propertyTypeLabel } from "@/lib/propertyType";
 import { tenureLabel } from "@/lib/tenure";
 import { newBuildLabel } from "@/lib/newBuild";
 
+type ServerCluster = { lng: number; lat: number; count: number; clusterId: number | null };
+
 type MapProps = {
     properties: Property[];
+    serverClusters: ServerCluster[];
     selectedPropertyId?: number;
     onSelectProperty: (id: number | null) => void;
     onBoundsChange?: (bbox: string, zoom: number) => void;
@@ -17,6 +20,7 @@ type MapProps = {
 
 export default function Map({
     properties,
+    serverClusters,
     selectedPropertyId,
     onSelectProperty,
     onBoundsChange
@@ -136,6 +140,66 @@ export default function Map({
                     "circle-stroke-color": "#0b0b0b",
                 },
             });
+
+            // --- server-side clusters (Supercluster results, no MapLibre clustering) ---
+            map.addSource("server-clusters", {
+                type: "geojson",
+                data: { type: "FeatureCollection", features: [] },
+            });
+
+            map.addLayer({
+                id: "server-clusters-layer",
+                type: "circle",
+                source: "server-clusters",
+                paint: {
+                    "circle-radius": [
+                        "step",
+                        ["get", "count"],
+                        14,
+                        50, 18,
+                        200, 24,
+                        1000, 30,
+                        5000, 36,
+                    ],
+                    "circle-color": [
+                        "step",
+                        ["get", "count"],
+                        "#5b8def",
+                        50, "#4f7fe0",
+                        200, "#3f6fce",
+                        1000, "#2f5eb8",
+                    ],
+                    "circle-opacity": 0.9,
+                    "circle-stroke-width": 1,
+                    "circle-stroke-color": "#0b0b0b",
+                },
+            });
+
+            map.addLayer({
+                id: "server-clusters-count",
+                type: "symbol",
+                source: "server-clusters",
+                layout: {
+                    "text-field": ["to-string", ["get", "count"]],
+                    "text-size": 12,
+                },
+                paint: { "text-color": "#fff" },
+            });
+
+            const updateClusterVisibility = () => {
+                const z = map.getZoom();
+                const lowZoom = z < 12;
+
+                map.setLayoutProperty("server-clusters-layer", "visibility", lowZoom ? "visible" : "none");
+                map.setLayoutProperty("server-clusters-count", "visibility", lowZoom ? "visible" : "none");
+
+                map.setLayoutProperty("clusters", "visibility", lowZoom ? "none" : "visible");
+                map.setLayoutProperty("cluster-count", "visibility", lowZoom ? "none" : "visible");
+                map.setLayoutProperty("unclustered-point", "visibility", lowZoom ? "none" : "visible");
+            };
+
+            updateClusterVisibility();
+            map.on("zoomend", updateClusterVisibility);
 
             // --- ensure clusters render on top of basemap layers ---
             // (move to top in case style has symbol layers above)
@@ -261,6 +325,21 @@ export default function Map({
                 map.getCanvas().style.cursor = "";
             });
 
+            // --- click server-side clusters to zoom in enough for client clusters to take over ---
+            map.on("click", "server-clusters-layer", (e) => {
+                const f = e.features?.[0];
+                if (!f) return;
+
+                const [lng, lat] = (f.geometry as any).coordinates;
+
+                // jump zoom upward; once we hit >=12 the client clustering/points take over
+                const targetZoom = Math.max(map.getZoom() + 2, 12);
+                map.easeTo({ center: [lng, lat], zoom: targetZoom });
+            });
+
+            map.on("mouseenter", "server-clusters-layer", setPointer);
+            map.on("mouseleave", "server-clusters-layer", clearPointer);
+
             // NOTE: do NOT create DOM markers anymore.
         });
         map.on("moveend", emitBounds);
@@ -367,6 +446,30 @@ export default function Map({
 
         source.setData(geojson);
     }, [properties]);
+
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map) return;
+        const src = map.getSource("server-clusters") as maplibregl.GeoJSONSource | undefined;
+        if (!src) return;
+
+        console.log("[D client] serverClusters -> map source", {
+            zoom: map.getZoom(),
+            len: serverClusters.length,
+            min: serverClusters.reduce((m, c) => Math.min(m, c.count), Infinity),
+            max: serverClusters.reduce((m, c) => Math.max(m, c.count), -Infinity),
+            top5: [...serverClusters].sort((a, b) => b.count - a.count).slice(0, 5),
+        });
+
+        src.setData({
+            type: "FeatureCollection",
+            features: serverClusters.map((c) => ({
+                type: "Feature",
+                geometry: { type: "Point", coordinates: [c.lng, c.lat] },
+                properties: { count: c.count },
+            })),
+        });
+    }, [serverClusters]);
 
     useEffect(() => {
         const map = mapRef.current;
